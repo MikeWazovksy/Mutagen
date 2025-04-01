@@ -4,13 +4,47 @@ We take, for example, the key to the 19th puzzle 0000000000000000000000000000000
 
 and mutate its private key bits, this allows us to reduce the number of options for enumerating options
 
-build : g++ -O3 -march=native -std=c++17 mutagen.cpp -lssl -lcrypto -lpthread -o mutagen
+build : make
 
+# Solve puzzle 38 with 8 threads and override flip count to 21
 
-The program is in development mode. If anyone wants to help improve it, they are welcome.
+./puzzle_solver -p 38 -t 8 -f 21
 
-As improvements are made, the repository will be updated
+# Solve puzzle 20 with default settings
 
+./puzzle_solver
 
-donation address : 
+# Show help
+
+./puzzle_solver -h
+
+# Key Features
+
+Command-line options:
+
+-p/--puzzle: Puzzle number (20-68)
+
+-t/--threads: Number of CPU cores to use
+
+-f/--flips: Override default flip count
+
+-h/--help: Show usage information
+
+# Optimizations:
+
+AVX2 vectorization for cryptographic operations
+
+Multi-threading with OpenMP
+
+Batched processing for better cache utilization
+
+The solver is designed to be both efficient and easy to use, with sensible defaults that can be overridden as needed.
+
+Idea Denevron !
+dotation address :
+
 bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
+
+Thanks for the implementation nomachine!
+donation address :
+bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8
