@@ -41,10 +41,13 @@ Batched processing for better cache utilization
 The solver is designed to be both efficient and easy to use, with sensible defaults that can be overridden as needed.
 
 Idea Denevron !
+
 dotation address :
 
 bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
 
 Thanks for the implementation nomachine!
+
 donation address :
+
 bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8
