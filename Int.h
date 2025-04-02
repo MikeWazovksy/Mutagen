@@ -91,6 +91,7 @@ public:
   bool IsEven();
   bool IsOdd();
   bool IsProbablePrime();
+  void Xor(const Int *a);
 
   double ToDouble();
 
@@ -128,7 +129,6 @@ public:
   void ModSqrt();                      // this <- +/-sqrt(this) (mod n)
   bool HasSqrt();                      // true if this admit a square root
   void imm_umul_asm(const uint64_t *a, uint64_t b, uint64_t *res);
-  void Xor(const Int *a); // Xor
 
   // Specific SecpK1
   static void InitK1(Int *order);

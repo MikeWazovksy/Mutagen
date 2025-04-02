@@ -542,7 +542,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
             Int mask;
             mask.SetInt32(1);
             mask.ShiftL(pos);
-            currentKey.Xor(&mask); // Простое инвертирование бита
+            currentKey.Xor(&mask); // Simple bit flip
         }
 
         // Verify key length
