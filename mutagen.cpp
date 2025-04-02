@@ -99,7 +99,7 @@ const unordered_map<int, tuple<int, string, string>> PUZZLE_DATA = {
     {34, {16, "f6d67d7983bf70450f295c9cb828daab265f1bfa", "7137437912"}},
     {35, {19, "f6d8ce225ffbdecec170f8298c3fc28ae686df25", "14133072157"}},
     {36, {14, "74b1e012be1521e5d8d75e745a26ced845ea3d37", "20112871792"}},
-    {37, {23, "28c30fb11ed1da72e7c4f89c0164756e8a021d", "42387769980"}},
+    {37, {23, "28c30fb9118ed1da72e7c4f89c0164756e8a021d", "42387769980"}},
     {38, {21, "b190e2d40cfdeee2cee072954a2be89e7ba39364", "100251560595"}},
     {39, {23, "0b304f2a79a027270276533fe1ed4eff30910876", "146971536592"}},
     {40, {20, "95a156cd21b4a69de969eb6716864f4c8b82a82a", "323724968937"}},
@@ -502,6 +502,9 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
     uint8_t localHashResults[HASH_BATCH_SIZE][20];
     int pointIndices[HASH_BATCH_SIZE];
 
+    // Precompute target hash for comparison
+    __m256i target16 = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(TARGET_HASH160_RAW.data()));
+
     // Precompute points
     vector<Point> plusPoints(POINTS_BATCH_SIZE);
     vector<Point> minusPoints(POINTS_BATCH_SIZE);
@@ -539,19 +542,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
             Int mask;
             mask.SetInt32(1);
             mask.ShiftL(pos);
-
-            Int temp;
-            temp.Set(&currentKey);
-            temp.ShiftR(pos);
-
-            if (temp.IsEven())
-            {
-                currentKey.Add(&mask);
-            }
-            else
-            {
-                currentKey.Sub(&mask);
-            }
+            currentKey.Xor(&mask); // Простое инвертирование бита
         }
 
         // Verify key length
@@ -647,27 +638,18 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
                 computeHash160BatchBinSingle(localBatchCount, localPubKeys, localHashResults);
                 localComparedCount += HASH_BATCH_SIZE;
 
-                // Load the target hash (first 8 bytes)
-                const __m256i target = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(TARGET_HASH160_RAW.data()));
-                const uint64_t target_prefix = *reinterpret_cast<const uint64_t *>(TARGET_HASH160_RAW.data());
-
                 for (int j = 0; j < HASH_BATCH_SIZE; j++)
                 {
-                    // Quick check of first 5 bytes (use 8 bytes for alignment)
-                    const uint64_t current_prefix = *reinterpret_cast<const uint64_t *>(localHashResults[j]);
-                    if ((current_prefix & 0xFFFFFFFFFF) != (target_prefix & 0xFFFFFFFFFF))
-                    {
-                        continue; // Even the beginning didn't match -> skip
-                    }
+                    // Load candidate hash
+                    __m256i cand = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(localHashResults[j]));
 
-                    // If the first 5 bytes match -> check completely
-                    const __m256i result = _mm256_loadu_si256(reinterpret_cast<const __m256i *>(localHashResults[j]));
-                    const int mask = _mm256_movemask_epi8(_mm256_cmpeq_epi8(result, target));
+                    // Compare first 4 bytes using AVX2
+                    __m256i cmp = _mm256_cmpeq_epi8(cand, target16);
+                    int mask = _mm256_movemask_epi8(cmp);
 
-                    // Проверяем только 20 байт (первые 5 уже совпали)
-                    const int HASH160_MASK = (1 << 20) - 1;
-                    if ((mask & HASH160_MASK) == HASH160_MASK)
-                    {
+                    if ((mask & 0x0F) == 0x0F)
+                    { // First 4 bytes match
+                        // Full comparison
                         bool fullMatch = true;
                         for (int k = 0; k < 20; k++)
                         {
