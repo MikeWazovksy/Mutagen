@@ -15,6 +15,7 @@
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <immintrin.h>
 #include "Int.h"
 #include "IntGroup.h"
 #include <string.h>
@@ -90,13 +91,28 @@ void Int::Set(Int *a)
 
 void Int::Xor(const Int *a)
 {
-  if (!a)
-    return;
+    if (!a)
+        return;
 
-  for (int i = 0; i < NB64BLOCK; i++)
-  {
-    bits64[i] ^= a->bits64[i];
-  }
+    // Process four 64-bit integers at a time using AVX2
+    for (int i = 0; i < NB64BLOCK; i += 4)
+    {
+        // Load 256 bits (4x64) from both arrays
+        __m256i vecA = _mm256_loadu_si256((__m256i*)&a->bits64[i]);
+        __m256i vecThis = _mm256_loadu_si256((__m256i*)&bits64[i]);
+        
+        // Perform XOR
+        __m256i result = _mm256_xor_si256(vecThis, vecA);
+        
+        // Store the result back
+        _mm256_storeu_si256((__m256i*)&bits64[i], result);
+    }
+
+    // Handle remaining elements (if NB64BLOCK is not a multiple of 4)
+    for (int i = (NB64BLOCK / 4) * 4; i < NB64BLOCK; i++)
+    {
+        bits64[i] ^= a->bits64[i];
+    }
 }
 
 // ------------------------------------------------
