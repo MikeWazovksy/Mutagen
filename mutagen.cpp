@@ -504,15 +504,9 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId,
 
     while (!stop_event.load() && gen.currentRank() < end_rank)
     {
-
-        if (total_checked_avx.load() >= total_combinations)
-        {
-            stop_event.store(true);
-            break;
-        }
         auto masks = gen.generate512Batch();
         if (masks.empty())
-        { // All combinations have been tried
+        {
             break;
         }
 
@@ -524,15 +518,19 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId,
 
         for (int i = 0; i < actual_batch_size; i++)
         {
-            privKeys[i].Set(&BASE_KEY); // First reset the key to base
+            privKeys[i].Set(&BASE_KEY);
             for (int j = 0; j < flip_count; j++)
             {
                 Int bit;
                 bit.SetInt32(1);
-                bit.ShiftL(masks[i * flip_count + j]); // Apply flip
+                bit.ShiftL(masks[i * flip_count + j]);
                 privKeys[i].Xor(&bit);
             }
+
             pubKeys[i] = secp->ComputePublicKey(&privKeys[i]);
+
+            // std::cout << "Private key " << i << ": " << privKeys[i].GetBase16() << std::endl;
+            // std::cout << "Public key:  " << pubKeys[i].x.GetBase16() << std::endl;
         }
 
         for (int batch_offset = 0; batch_offset < actual_batch_size; batch_offset++)
@@ -622,28 +620,74 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId,
 
                 for (int i = 0; i < batch_size; i++)
                 {
-                    if (memcmp(hashBatch[keys_processed + i],
-                               TARGET_HASH160_RAW.data(), 20) == 0)
+                    printf("Checking key %d:\n", keys_processed + i);
+
+                    printf("  Compressed pubkey: ");
+                    for (int j = 0; j < 33; j++)
                     {
-                        // Key found
+                        printf("%02x", pubKeyBatch[i][j]);
+                    }
+                    printf("\n");
+
+                    printf("  Computed hash160: ");
+                    for (int j = 0; j < 20; j++)
+                    {
+                        printf("%02x", hashBatch[keys_processed + i][j]);
+                    }
+                    printf("\n");
+
+                    printf("  Target hash160:   ");
+                    for (int j = 0; j < 20; j++)
+                    {
+                        printf("%02x", TARGET_HASH160_RAW.data()[j]);
+                    }
+                    printf("\n");
+
+                    bool match = true;
+                    printf("  Byte comparison:  ");
+                    for (int j = 0; j < 20; j++)
+                    {
+                        if (hashBatch[keys_processed + i][j] != TARGET_HASH160_RAW.data()[j])
+                        {
+                            printf("XX ");
+                            match = false;
+                        }
+                        else
+                        {
+                            printf("%02x ", hashBatch[keys_processed + i][j]);
+                        }
+                    }
+                    printf("\n");
+
+                    if (match)
+                    {
+                        printf("!!! EXACT MATCH FOUND !!!\n");
+
                         Int foundKey;
                         foundKey.Set(&privKeys[batch_offset]);
                         if (keys_processed + i < POINTS_BATCH_SIZE)
                         {
+                            printf("Adding offset: %d\n", keys_processed + i);
                             foundKey.Add(keys_processed + i);
                         }
                         else
                         {
+                            printf("Subtracting offset: %d\n", keys_processed + i - POINTS_BATCH_SIZE);
                             foundKey.Sub(keys_processed + i - POINTS_BATCH_SIZE);
                         }
 
                         string hexKey = foundKey.GetBase16();
                         hexKey = string(64 - hexKey.length(), '0') + hexKey;
+                        printf("Found private key: %s\n", hexKey.c_str());
 
                         lock_guard<mutex> lock(result_mutex);
                         results.push(make_tuple(hexKey, total_checked_avx.load(), flip_count));
                         stop_event.store(true);
                         return;
+                    }
+                    else
+                    {
+                        printf("  No match\n\n");
                     }
                 }
                 keys_processed += batch_size;
