@@ -34,10 +34,10 @@ def run_program():
 
     # Check the program output for a successful solution
     if "Solution saved" in result.stdout:
-        print(f"Solution found with key ! WoW ! Congratulations !")
+        print(f"WoW ! Congratulations !")
         return True  # Solution found
     elif "No solution found" in result.stdout:
-        print(f"No solution found with key ! Trying again...")
+        print(f"Trying again...")
         return False  # Solution not found
     else:
         print(f"Unexpected output: {result.stdout}")
