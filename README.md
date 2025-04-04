@@ -34,7 +34,7 @@ Command-line options:
 
 -f/--flips: Override default flip count
 
--k/--key: Custom Base Key
+-k/--key: Custom Key
 
 -h/--help: Show usage information
 
