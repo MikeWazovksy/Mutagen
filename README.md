@@ -10,6 +10,12 @@ build : make
 
 ./puzzle_solver -p 38 -t 8 -f 21
 
+# Solve puzzle 38 with 8 threads and override flip count to 21 and custom base key 123456
+
+# If you do not use a custom key, the key will be set automatically to the default from the previous puzzle.
+
+./puzzle_solver -p 38 -t 8 -f 21 -k 123456
+
 # Solve puzzle 20 with default settings
 
 ./puzzle_solver
@@ -27,6 +33,8 @@ Command-line options:
 -t/--threads: Number of CPU cores to use
 
 -f/--flips: Override default flip count
+
+-k/--key: Custom Base Key
 
 -h/--help: Show usage information
 

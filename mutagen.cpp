@@ -129,7 +129,7 @@ const unordered_map<int, tuple<int, string, string>> PUZZLE_DATA = {
     {65, {37, "52e763a7ddc1aa4fa811578c491c1bc7fd570137", "17799667357578236628"}},
     {66, {35, "20d45a6a762535700ce9e0b216e31994335db8a5", "30568377312064202855"}},
     {67, {31, "739437bb3dd6d1983e66629c5f08c70e52769371", "46346217550346335726"}},
-    {68, {34, "e0b8a2baee1b77fc703455f39d51477451fc8cfc", "132656943602386256302"}}};
+    {68, {34, "e0b8a2baee1b77fc703455f39d51477451fc8cfc", "282423166250959962112"}}};
 
 // Global variables
 vector<unsigned char> TARGET_HASH160_RAW(20);
@@ -724,7 +724,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
                     cout << "Elapsed Time: " << formatElapsedTime(globalElapsedTime) << "\n";
                     cout.flush();
 
-                    last_report_time = now; // Сбрасываем таймер
+                    last_report_time = now; // Reset the timer
 
                     if (current_total >= total_combinations)
                     {
@@ -761,9 +761,10 @@ void printUsage(const char *programName)
     cout << "  -p, --puzzle NUM    Puzzle number to solve (default: 20)\n";
     cout << "  -t, --threads NUM   Number of CPU cores to use (default: all)\n";
     cout << "  -f, --flips NUM     Override default flip count for puzzle\n";
+    cout << "  -k, --key KEY       Custom base key (hex or decimal)\n";
     cout << "  -h, --help          Show this help message\n";
     cout << "\nExample:\n";
-    cout << "  " << programName << " -p 38 -t 8 -f 21\n";
+    cout << "  " << programName << " -p 38 -t 8 -f 21 -k 12345\n";
 }
 
 int main(int argc, char *argv[])
@@ -777,10 +778,13 @@ int main(int argc, char *argv[])
         {"puzzle", required_argument, 0, 'p'},
         {"threads", required_argument, 0, 't'},
         {"flips", required_argument, 0, 'f'},
+        {"key", required_argument, 0, 'k'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}};
 
-    while ((opt = getopt_long(argc, argv, "p:t:f:h", long_options, &option_index)) != -1)
+    string custom_base_key;
+
+    while ((opt = getopt_long(argc, argv, "p:t:f:k:h", long_options, &option_index)) != -1)
     {
         if (opt == -1)
             break;
@@ -810,6 +814,9 @@ int main(int argc, char *argv[])
                 cerr << "Error: Flip count must be at least 1\n";
                 return 1;
             }
+            break;
+        case 'k':
+            custom_base_key = optarg;
             break;
         case 'h':
             printUsage(argv[0]);
@@ -848,21 +855,36 @@ int main(int argc, char *argv[])
         TARGET_HASH160_RAW[i] = stoul(TARGET_HASH160.substr(i * 2, 2), nullptr, 16);
     }
 
-    // Set base key from decimal string
-    BASE_KEY.SetBase10(const_cast<char *>(PRIVATE_KEY_DECIMAL.c_str()));
+    // Set base key
+    if (!custom_base_key.empty())
+    {
+        // Use a custom key
+        BASE_KEY.SetBase10(const_cast<char *>(custom_base_key.c_str()));
+        cout << "Using custom base key (decimal): " << custom_base_key << "\n";
+    }
+    else
+    {
+        // Use the default key from PUZZLE_DATA
+        BASE_KEY.SetBase10(const_cast<char *>(PRIVATE_KEY_DECIMAL.c_str()));
+        cout << "Using default base key from puzzle: " << PRIVATE_KEY_DECIMAL << "\n";
+    }
 
     // Verify base key
     Int testKey;
-    testKey.SetBase10(const_cast<char *>(PRIVATE_KEY_DECIMAL.c_str()));
+    if (!custom_base_key.empty())
+    {
+        // Use a custom key for verification
+        testKey.SetBase10(const_cast<char *>(custom_base_key.c_str()));
+    }
+    else
+    {
+        // Use the default key from PUZZLE_DATA to check
+        testKey.SetBase10(const_cast<char *>(PRIVATE_KEY_DECIMAL.c_str()));
+    }
+
     if (!testKey.IsEqual(&BASE_KEY))
     {
         cerr << "Base key initialization failed!\n";
-        return 1;
-    }
-
-    if (BASE_KEY.GetBitLength() > PUZZLE_NUM)
-    {
-        cerr << "Base key exceeds puzzle bit length!\n";
         return 1;
     }
 
