@@ -860,13 +860,11 @@ int main(int argc, char *argv[])
     {
         // Use a custom key
         BASE_KEY.SetBase10(const_cast<char *>(custom_base_key.c_str()));
-        cout << "Using custom base key (decimal): " << custom_base_key << "\n";
     }
     else
     {
         // Use the default key from PUZZLE_DATA
         BASE_KEY.SetBase10(const_cast<char *>(PRIVATE_KEY_DECIMAL.c_str()));
-        cout << "Using default base key from puzzle: " << PRIVATE_KEY_DECIMAL << "\n";
     }
 
     // Verify base key

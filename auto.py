@@ -4,7 +4,7 @@ import subprocess
 
 # Options
 puzzle = 68
-flips = 6
+flips = 5
 cpu = 26
 
 # Constants for generating random number
