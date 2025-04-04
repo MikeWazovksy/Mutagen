@@ -800,7 +800,7 @@ int main(int argc, char *argv[])
         {
         case 'p':
             PUZZLE_NUM = atoi(optarg);
-            if (PUZZLE_NUM < 20 || PUZZLE_NUM > 68)
+            if (PUZZLE_NUM < 20 || PUZZLE_NUM > 101)
             {
                 cerr << "Error: Puzzle number must be between 20 and 68\n";
                 return 1;
