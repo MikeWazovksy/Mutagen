@@ -488,7 +488,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
 {
 
     auto last_report_time = chrono::high_resolution_clock::now();
-    const auto report_interval = chrono::seconds(5); // Интервал 5 секунд
+    const auto report_interval = chrono::seconds(1); // Iterval 1 seconds
     const int fullBatchSize = 2 * POINTS_BATCH_SIZE;
     alignas(32) uint8_t localPubKeys[HASH_BATCH_SIZE][33];
     alignas(32) uint8_t localHashResults[HASH_BATCH_SIZE][20];
@@ -746,7 +746,6 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
         {
             break;
         }
-        count.increment();
 
         if (count >= end)
         {
