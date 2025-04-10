@@ -1,4 +1,3 @@
-import random
 import subprocess
 
 # Options
@@ -6,30 +5,26 @@ puzzle = 71
 flips = 5
 cpu = 26
 
-# Constants for generating random number
-LOWER = 1180591620717411303424
-UPPER = 2361183241434822606847
+# Path to the text file containing the keys (one per line)
+key_file = 'keys.txt'
 
-def run_program():
-    # Generate a random key within LOWER and UPPER
-    random_key = random.randint(LOWER, UPPER)
-    
-    # Prepare command with random value for -k
+def run_program(key):
+    # Prepare command with the provided key
     command = [
         "./mutagen",             # Path to your program
         "-p", str(puzzle),       # Parameter for puzzle number
         "-t", str(cpu),          # Parameter for the number of processors
         "-f", str(flips),        # Parameter for the number of flips
-        "-k", str(random_key)    # Generated random key
+        "-k", str(key)           # Provided key
     ]
     
     # Run the program and wait for completion
     result = subprocess.run(command, capture_output=True, text=True)
 
     # Output the entire program result (stdout and stderr)
-    print(f"Output for key {random_key}:\n{result.stdout}")
+    print(f"Output for key {key}:\n{result.stdout}")
     if result.stderr:
-        print(f"Error output for key {random_key}:\n{result.stderr}")
+        print(f"Error output for key {key}:\n{result.stderr}")
 
     # Check the program output for a successful solution
     if "Solution saved" in result.stdout:
@@ -42,7 +37,15 @@ def run_program():
         print(f"Unexpected output: {result.stdout}")
         return False  # In case of unexpected conclusions, we also try again.
 
-# A loop that will rerun the program with a new key until a solution is found
-while True:
-    if run_program():
-        break  # If a solution is found, exit the loop
+def load_keys_from_file():
+    with open(key_file, 'r') as file:
+        keys = [line.strip() for line in file.readlines() if line.strip()]
+    return keys
+
+# Load keys from the file
+keys = load_keys_from_file()
+
+# Iterate through each key in the list
+for key in keys:
+    if run_program(key):
+        break  # If a solution is found, stop the loop

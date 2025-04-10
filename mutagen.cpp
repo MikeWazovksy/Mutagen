@@ -130,6 +130,7 @@ const unordered_map<int, tuple<int, string, string>> PUZZLE_DATA = {
     {66, {35, "20d45a6a762535700ce9e0b216e31994335db8a5", "30568377312064202855"}},
     {67, {31, "739437bb3dd6d1983e66629c5f08c70e52769371", "46346217550346335726"}},
     {68, {34, "e0b8a2baee1b77fc703455f39d51477451fc8cfc", "132656943602386256302"}},
+    {69, {35, "61eb8a50c86b0584bb727dd65bed8d2400d6d5aa", "219898266213316039825"}},
     {71, {15, "f6f5431d25bbf7b12e8add9af5e3475c44a0a5b8", "970436974005023690481"}},
     {76, {42, "86f9fea5cdecf033161dd2f8f8560768ae0a6d14", "22538323240989823823367"}},
     {81, {46, "351e605fac813965951ba433b7c2956bf8ad95ce", "1105520030589234487939456"}},
@@ -305,7 +306,7 @@ public:
         if (k > n)
             return 0;
         if (k * 2 > n)
-            k = n - k; // Use symmetry
+            k = n - k;
         if (k == 0)
             return 1;
 
@@ -313,12 +314,11 @@ public:
         for (int i = 2; i <= k; ++i)
         {
             result *= (n - i + 1);
-            result /= i; // This division is always exact
+            result /= i;
         }
         return result;
     }
 
-    // AVX2 optimized version that calculates 4 combinations at once
     static __m256i combinations_count_avx(int n, int k)
     {
         alignas(32) uint64_t counts[4];
@@ -359,7 +359,6 @@ public:
         int a = n;
         int b = k;
         __uint128_t x = (total - 1) - rank;
-
         for (int i = 0; i < k; i++)
         {
             a = largest_a_where_comb_a_b_le_x(a, b, x);
@@ -546,13 +545,11 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
         // Verify key length
         string keyStr = currentKey.GetBase16();
         keyStr = string(64 - keyStr.length(), '0') + keyStr;
-
 #pragma omp critical
         {
             g_threadPrivateKeys[threadId] = keyStr;
         }
 
-        // Compute public key
         Point startPoint = secp->ComputePublicKey(&currentKey);
         Int startPointX, startPointY, startPointXNeg;
         startPointX.Set(&startPoint.x);
@@ -560,9 +557,9 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
         startPointXNeg.Set(&startPointX);
         startPointXNeg.ModNeg();
 
-        // Compute deltaX values in batches with manual loop unrolling
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4)
         {
+
             deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
             deltaX[i + 1].ModSub(&plusPoints[i + 1].x, &startPointX);
             deltaX[i + 2].ModSub(&plusPoints[i + 2].x, &startPointX);
@@ -571,54 +568,65 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
         modGroup.Set(deltaX);
         modGroup.ModInv();
 
-        // Process plus and minus points with manual loop unrolling
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4)
         {
-            // Process 4 plus points
-            for (int j = 0; j < 4; j++)
-            {
-                Int deltaY;
-                deltaY.ModSub(&plusPoints[i + j].y, &startPointY);
-                Int slope;
-                slope.ModMulK1(&deltaY, &deltaX[i + j]);
-                Int slopeSq;
-                slopeSq.ModSquareK1(&slope);
 
-                pointBatchX[i + j].Set(&startPointXNeg);
-                pointBatchX[i + j].ModAdd(&slopeSq);
-                pointBatchX[i + j].ModSub(&plusPoints[i + j].x);
+            deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
+            deltaX[i + 1].ModSub(&plusPoints[i + 1].x, &startPointX);
+            deltaX[i + 2].ModSub(&plusPoints[i + 2].x, &startPointX);
+            deltaX[i + 3].ModSub(&plusPoints[i + 3].x, &startPointX);
+        }
+        modGroup.Set(deltaX);
+        modGroup.ModInv();
 
-                Int diffX;
-                diffX.ModSub(&startPointX, &pointBatchX[i + j]);
-                diffX.ModMulK1(&slope);
+        for (int i = 0; i < POINTS_BATCH_SIZE; i++)
+        {
+            Int deltaY;
+            deltaY.ModSub(&plusPoints[i].y, &startPointY);
 
-                pointBatchY[i + j].Set(&startPointY);
-                pointBatchY[i + j].ModNeg();
-                pointBatchY[i + j].ModAdd(&diffX);
-            }
+            Int slope;
+            slope.ModMulK1(&deltaY, &deltaX[i]);
 
-            // Process 4 minus points
-            for (int j = 0; j < 4; j++)
-            {
-                Int deltaY;
-                deltaY.ModSub(&minusPoints[i + j].y, &startPointY);
-                Int slope;
-                slope.ModMulK1(&deltaY, &deltaX[i + j]);
-                Int slopeSq;
-                slopeSq.ModSquareK1(&slope);
+            Int slopeSq;
+            slopeSq.ModSquareK1(&slope);
 
-                pointBatchX[POINTS_BATCH_SIZE + i + j].Set(&startPointXNeg);
-                pointBatchX[POINTS_BATCH_SIZE + i + j].ModAdd(&slopeSq);
-                pointBatchX[POINTS_BATCH_SIZE + i + j].ModSub(&minusPoints[i + j].x);
+            pointBatchX[i].Set(&startPointXNeg);
+            pointBatchX[i].ModAdd(&slopeSq);
+            pointBatchX[i].ModSub(&plusPoints[i].x);
 
-                Int diffX;
-                diffX.ModSub(&startPointX, &pointBatchX[POINTS_BATCH_SIZE + i + j]);
-                diffX.ModMulK1(&slope);
+            Int diffX;
+            diffX.Set(&startPointX);
+            diffX.ModSub(&pointBatchX[i]);
+            diffX.ModMulK1(&slope);
 
-                pointBatchY[POINTS_BATCH_SIZE + i + j].Set(&startPointY);
-                pointBatchY[POINTS_BATCH_SIZE + i + j].ModNeg();
-                pointBatchY[POINTS_BATCH_SIZE + i + j].ModAdd(&diffX);
-            }
+            pointBatchY[i].Set(&startPointY);
+            pointBatchY[i].ModNeg();
+            pointBatchY[i].ModAdd(&diffX);
+        }
+
+        for (int i = 0; i < POINTS_BATCH_SIZE; i++)
+        {
+            Int deltaY;
+            deltaY.ModSub(&minusPoints[i].y, &startPointY);
+
+            Int slope;
+            slope.ModMulK1(&deltaY, &deltaX[i]);
+
+            Int slopeSq;
+            slopeSq.ModSquareK1(&slope);
+
+            pointBatchX[POINTS_BATCH_SIZE + i].Set(&startPointXNeg);
+            pointBatchX[POINTS_BATCH_SIZE + i].ModAdd(&slopeSq);
+            pointBatchX[POINTS_BATCH_SIZE + i].ModSub(&minusPoints[i].x);
+
+            Int diffX;
+            diffX.Set(&startPointX);
+            diffX.ModSub(&pointBatchX[POINTS_BATCH_SIZE + i]);
+            diffX.ModMulK1(&slope);
+
+            pointBatchY[POINTS_BATCH_SIZE + i].Set(&startPointY);
+            pointBatchY[POINTS_BATCH_SIZE + i].ModNeg();
+            pointBatchY[POINTS_BATCH_SIZE + i].ModAdd(&diffX);
         }
 
         // Process keys in optimized batches
@@ -683,7 +691,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
                             Int foundKey;
                             foundKey.Set(&currentKey);
                             int idx = pointIndices[j];
-                            if (idx < POINTS_BATCH_SIZE)
+                            if (idx < 256)
                             {
                                 Int offset;
                                 offset.SetInt32(idx);
@@ -692,7 +700,7 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
                             else
                             {
                                 Int offset;
-                                offset.SetInt32(idx - POINTS_BATCH_SIZE);
+                                offset.SetInt32(idx - 256);
                                 foundKey.Sub(&offset);
                             }
 
@@ -916,6 +924,12 @@ int main(int argc, char *argv[])
         cout << "(override, default was " << DEFAULT_FLIP_COUNT << ")";
     }
     cout << "\n";
+
+    if (PUZZLE_NUM == 69 && FLIP_COUNT == 35)
+    {
+        cout << "*** WARNING: Flip count 35 is an ESTIMATE for Puzzle 69 and might be incorrect! ***\n";
+        cout << "*** WARNING: Flip count is an ESTIMATE for Puzzle 69 and might be incorrect! ***\n";
+    }
     cout << "Total Flips: " << to_string_128(total_combinations) << "\n";
     cout << "Using: " << WORKERS << " threads\n";
     cout << "\n";
