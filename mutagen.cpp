@@ -542,9 +542,9 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
             currentKey.Xor(&mask);
         }
 
-        // Verify key length
         string keyStr = currentKey.GetBase16();
         keyStr = string(64 - keyStr.length(), '0') + keyStr;
+
 #pragma omp critical
         {
             g_threadPrivateKeys[threadId] = keyStr;
@@ -556,17 +556,6 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
         startPointY.Set(&startPoint.y);
         startPointXNeg.Set(&startPointX);
         startPointXNeg.ModNeg();
-
-        for (int i = 0; i < POINTS_BATCH_SIZE; i += 4)
-        {
-
-            deltaX[i].ModSub(&plusPoints[i].x, &startPointX);
-            deltaX[i + 1].ModSub(&plusPoints[i + 1].x, &startPointX);
-            deltaX[i + 2].ModSub(&plusPoints[i + 2].x, &startPointX);
-            deltaX[i + 3].ModSub(&plusPoints[i + 3].x, &startPointX);
-        }
-        modGroup.Set(deltaX);
-        modGroup.ModInv();
 
         for (int i = 0; i < POINTS_BATCH_SIZE; i += 4)
         {
@@ -681,7 +670,6 @@ void worker(Secp256K1 *secp, int bit_length, int flip_count, int threadId, AVXCo
                             auto tEndTime = chrono::high_resolution_clock::now();
                             globalElapsedTime = chrono::duration<double>(tEndTime - tStart).count();
 
-                            // Report actual work done
                             {
                                 lock_guard<mutex> lock(progress_mutex);
                                 globalComparedCount += actual_work_done;

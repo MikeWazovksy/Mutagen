@@ -91,29 +91,47 @@ void Int::Set(Int *a)
 
 void Int::Xor(const Int *a)
 {
-
   if (!a)
     return;
 
-  // Process four 64-bit integers at a time using AVX2
-  for (int i = 0; i < NB64BLOCK; i += 4)
-  {
-    // Load 256 bits (4x64) from both arrays
-    __m256i vecA = _mm256_loadu_si256((__m256i *)&a->bits64[i]);
-    __m256i vecThis = _mm256_loadu_si256((__m256i *)&bits64[i]);
+  // Ensure bits64 is aligned to 32 bytes for best performance
+  uint64_t *this_bits = bits64;
+  const uint64_t *a_bits = a->bits64;
+  const int count = NB64BLOCK;
 
-    // Perform XOR
-    __m256i result = _mm256_xor_si256(vecThis, vecA);
+  asm volatile(
+      "mov %[count], %%ecx\n\t" // Load count into ECX
+      "shr $2, %%ecx\n\t"       // Divide by 4 (process 4 elements per iteration)
+      "jz 2f\n\t"               // Jump to trailing elements if count < 4
 
-    // Store the result back
-    _mm256_storeu_si256((__m256i *)&bits64[i], result);
-  }
+      "1:\n\t"                                   // Main loop
+      "vmovdqa (%[a_bits]), %%ymm0\n\t"          // Load 256 bits from a
+      "vpxor (%[this_bits]), %%ymm0, %%ymm0\n\t" // XOR with this
+      "vmovdqa %%ymm0, (%[this_bits])\n\t"       // Store result
+      "add $32, %[a_bits]\n\t"                   // Advance pointers
+      "add $32, %[this_bits]\n\t"
+      "dec %%ecx\n\t" // Decrement counter
+      "jnz 1b\n\t"    // Loop if not zero
 
-  // Handle remaining elements (if NB64BLOCK is not a multiple of 4)
-  for (int i = (NB64BLOCK / 4) * 4; i < NB64BLOCK; i++)
-  {
-    bits64[i] ^= a->bits64[i];
-  }
+      "vzeroupper\n\t" // Clear upper AVX state (important for SSE code)
+
+      "2:\n\t" // Handle trailing elements (count % 4)
+      "mov %[count], %%ecx\n\t"
+      "and $3, %%ecx\n\t" // ECX = count % 4
+      "jz 4f\n\t"         // Exit if no trailing elements
+
+      "3:\n\t" // Trailing elements loop
+      "mov (%[a_bits]), %%rax\n\t"
+      "xor %%rax, (%[this_bits])\n\t"
+      "add $8, %[a_bits]\n\t"
+      "add $8, %[this_bits]\n\t"
+      "dec %%ecx\n\t"
+      "jnz 3b\n\t"
+
+      "4:\n\t"
+      : [this_bits] "+r"(this_bits), [a_bits] "+r"(a_bits)
+      : [count] "r"(count)
+      : "rax", "rcx", "ymm0", "memory", "cc");
 }
 
 // ------------------------------------------------
