@@ -928,6 +928,7 @@ int main(int argc, char *argv[])
         cout << "Private key: " << compactHex << "\n";
         cout << "Checked " << to_string_128(checked) << " combinations\n";
         cout << "Bit flips: " << flips << endl;
+        cout << "Unchanged bits: " << EXCLUDE_BITS << " bits\n";
         cout << "Time: " << fixed << setprecision(2) << globalElapsedTime << " seconds ("
              << formatElapsedTime(globalElapsedTime) << ")\n";
         cout << "Speed: " << fixed << setprecision(2) << mkeysPerSec << " Mkeys/s\n";

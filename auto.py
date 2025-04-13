@@ -2,24 +2,23 @@ import random
 import subprocess
 
 # Options
-puzzle = 71
+puzzle = 69
 flips = 5
 cpu = 26
+exclude = 4
 
 # Constants for generating random number
-LOWER = 1180591620717411303424
-UPPER = 2361183241434822606847
+LOWER = 295147905179352825856
+UPPER = 590295810358705651711
 
-def run_program():
-    # Generate a random key within LOWER and UPPER
-    random_key = random.randint(LOWER, UPPER)
-    
+def run_program(random_key):
     # Prepare command with random value for -k
     command = [
         "./mutagen",             # Path to your program
         "-p", str(puzzle),       # Parameter for puzzle number
         "-t", str(cpu),          # Parameter for the number of processors
         "-f", str(flips),        # Parameter for the number of flips
+        "-x", str(exclude),      # Unchanged bits
         "-k", str(random_key)    # Generated random key
     ]
     
@@ -27,7 +26,7 @@ def run_program():
     result = subprocess.run(command, capture_output=True, text=True)
 
     # Output the entire program result (stdout and stderr)
-    print(f"Output for key {random_key}:\n{result.stdout}")
+    print(f"{result.stdout}")
     if result.stderr:
         print(f"Error output for key {random_key}:\n{result.stderr}")
 
@@ -42,7 +41,20 @@ def run_program():
         print(f"Unexpected output: {result.stdout}")
         return False  # In case of unexpected conclusions, we also try again.
 
-# A loop that will rerun the program with a new key until a solution is found
+def generate_random_key():
+    while True:
+        # Generate a random key within LOWER and UPPER
+        random_key = random.randint(LOWER, UPPER)
+        
+        # Convert the random key to hexadecimal
+        hex_key = hex(random_key)[2:]  # Remove the '0x' prefix
+
+        # Check if the first character is "1"
+        if hex_key[0] == '1':
+            return random_key  # Return the valid key
+    
+# Main loop to find the solution
 while True:
-    if run_program():
+    random_key = generate_random_key()
+    if run_program(random_key):
         break  # If a solution is found, exit the loop
