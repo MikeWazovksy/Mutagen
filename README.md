@@ -32,7 +32,7 @@ make
 
 ## 🛠 **Command Options**
 
-| 🟢 **Option**   | **Description**                          |
+| 🟢 **Option**   | 🟡 **Description**                       |
 | --------------- | ---------------------------------------- |
 | `-p, --puzzle`  | Puzzle number (20-101)                   |
 | `-t, --threads` | CPU threads to use                       |
@@ -53,4 +53,5 @@ make
 - _Thanks for the help, **NoMachine1**!_ 🔧 [![Donate](https://img.shields.io/badge/donate-Bitcoin-ff9900)](https://blockchair.com/bitcoin/address/bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8)
 
 ✨ **Happy solving!**  
-If you find this useful, please ⭐️ the repo!
+If you find this useful, please ⭐️ the repo!  
+And if you'd like to support the project, you can donate 💰
