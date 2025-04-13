@@ -1,7 +1,7 @@
 import subprocess
 
 # Options
-puzzle = 71
+puzzle = 69
 flips = 5
 cpu = 26
 

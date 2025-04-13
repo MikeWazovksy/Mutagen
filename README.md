@@ -1,61 +1,56 @@
-The idea of ​​the program is to mutate one private key from the previous puzzle to find the solution to the next one.
+# 🧬 Mutagen - Bitcoin Puzzle Solver
 
-We take, for example, the key to the 19th puzzle 0000000000000000000000000000000000000000000000000000000000005749f and the address of the next one in hash160 : b907c3a2a3b27789dfb509b730dd47703c272868
+**🔍 Description**: A tool for mutating private keys from previous Bitcoin puzzles to find solutions for subsequent ones using bit-flipping mutations.
 
-and mutate its private key bits, this allows us to reduce the number of options for enumerating options
+## ✨ Idea
 
-build : make
+Takes a private key from a previous puzzle (e.g. `000...5749f` for Puzzle 19) and the next puzzle's hash160 address, then performs controlled bit mutations to efficiently search the solution space.
 
-# Solve puzzle 38 with 8 threads and override flip count to 21
+## 🚀 Installation
 
-./puzzle_solver -p 38 -t 8 -f 21
+git clone https://github.com/MikeWazovksy/Mutagen.git
 
-# Solve puzzle 38 with 8 threads and override flip count to 21 and custom base key 123456
+cd Mutagen
 
-If you do not use a custom key, the key will be set automatically to the default from the previous puzzle.
+make
 
-./puzzle_solver -p 38 -t 8 -f 21 -k 123456
+## 💻 Basic solve:
 
-# Solve puzzle 20 with default settings
+./mutagen -p 38 -t 8 -f 21
 
-./puzzle_solver
+## 🔑 With custom key:
 
-# Show help
+./mutagen -p 38 -t 8 -f 21 -k 123456
 
-./puzzle_solver -h
+## 🔒 With fixed bits:
 
-# Key Features
+./mutagen -p 38 -t 8 -f 21 -k 123456 -x 4
 
-Command-line options:
+## 🏁 Default settings:
 
--p/--puzzle: Puzzle number (20-68)
+./mutagen -h
 
--t/--threads: Number of CPU cores to use
+## 🛠 **Command Options**
 
--f/--flips: Override default flip count
+| 🟢 **Option**   | **Description**                          |
+| --------------- | ---------------------------------------- |
+| `-p, --puzzle`  | Puzzle number (20-101)                   |
+| `-t, --threads` | CPU threads to use                       |
+| `-f, --flips`   | Override default flip count              |
+| `-k, --key`     | Custom base private key                  |
+| `-x, --exclude` | Number of fixed prefix bits (default: 0) |
 
--k/--key: Custom Key
+## 🔧 **Optimizations**
 
--h/--help: Show usage information
+- **AVX2** accelerated cryptography
+- Multi-threaded with **OpenMP**
+- Batched processing for **cache efficiency**
+- Intelligent bit mutation patterns
 
-# Optimizations:
+## 👏 **Credits**
 
-AVX2 vectorization for cryptographic operations
+- _**Idea**: Denevron_ 💡 [![Donate](https://img.shields.io/badge/donate-Bitcoin-ff9900)](https://blockchair.com/bitcoin/address/bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc)
+- _Thanks for the help, **NoMachine1**!_ 🔧 [![Donate](https://img.shields.io/badge/donate-Bitcoin-ff9900)](https://blockchair.com/bitcoin/address/bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8)
 
-Multi-threading with OpenMP
-
-Batched processing for better cache utilization
-
-The solver is designed to be both efficient and easy to use, with sensible defaults that can be overridden as needed.
-
-Idea Denevron !
-
-dotation address :
-
-bc1qa3c5xdc6a3n2l3w0sq3vysustczpmlvhdwr8vc
-
-Thanks for the implementation nomachine!
-
-donation address :
-
-bc1qdwnxr7s08xwelpjy3cc52rrxg63xsmagv50fa8
+✨ **Happy solving!**  
+If you find this useful, please ⭐️ the repo!
